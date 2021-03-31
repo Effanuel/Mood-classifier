@@ -30,4 +30,6 @@ python main.py
 
 
 ### Text Processing flow:
-* TODO
+* Improve data cleaning;
+* Removing stop words;
+* ...
