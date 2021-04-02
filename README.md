@@ -30,6 +30,5 @@ python main.py
 
 
 ### Text Processing flow:
-* Improve data cleaning;
-* Removing stop words;
+* Removed http links
 * ...
