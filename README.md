@@ -31,4 +31,4 @@ python main.py
 
 ### Text Processing flow:
 * Removed http links
-* ...
+* ... might be helpful https://realpython.com/python-nltk-sentiment-analysis/
