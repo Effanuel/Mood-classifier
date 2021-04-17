@@ -103,7 +103,7 @@ class Classifier:
 
 def main():
     model = Classifier()
-    model = model.loadData().fit().print_score().predict(2)
+    model = model.loadData().fit().print_score().predict(2, output_to_html=True)
 
 
 if __name__ == '__main__':
