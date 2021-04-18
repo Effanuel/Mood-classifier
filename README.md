@@ -29,6 +29,5 @@ python main.py
 ```
 
 
-### Text Processing flow:
-* Removed http links
+* https://towardsdatascience.com/what-makes-your-question-insincere-in-quora-26ee7658b010
 * ... might be helpful https://realpython.com/python-nltk-sentiment-analysis/
