@@ -29,5 +29,7 @@ python main.py
 ```
 
 
+Data downloaded from [here](https://www.kaggle.com/kazanova/sentiment140), tokenized with TweetTokenizer and cleaned by removing links and @'s
+
 * https://towardsdatascience.com/what-makes-your-question-insincere-in-quora-26ee7658b010
 * ... might be helpful https://realpython.com/python-nltk-sentiment-analysis/
