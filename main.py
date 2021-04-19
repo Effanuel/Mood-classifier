@@ -2,29 +2,20 @@ import nltk
 import random
 import os.path
 import re
-import string
-from nltk.tag import pos_tag
+import webbrowser
+import getopt
+import sys
 from nltk.corpus import stopwords
-from nltk.corpus import twitter_samples
-from nltk.stem.wordnet import WordNetLemmatizer
-from nltk import FreqDist, classify, NaiveBayesClassifier
-from nltk.probability import ELEProbDist
 from lime.lime_text import LimeTextExplainer
 import pickle
 import pandas as pd
 from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
 from sklearn.pipeline import make_pipeline
-from lime.lime_text import LimeTextExplainer
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
-from collections import OrderedDict
 from sklearn.metrics import f1_score
-from colorama import Fore, Back, Style
-import matplotlib.pyplot as plt
-from nltk.tokenize import TweetTokenizer
 
-stop_words = stopwords.words('english')
+# stop_words = stopwords.words('english')
 
 #lemmatizer = WordNetLemmatizer()
 ## Helper function that was used for cleaning data
@@ -46,14 +37,14 @@ stop_words = stopwords.words('english')
 
 
 class Classifier:
-    def __init__(self, with_stopwords=False):
+    def __init__(self):
         self.train_data = []
         self.val_data = []
         self.model = None
-        self.tfidf_vc = TfidfVectorizer(min_df = 10, max_features = 200000, analyzer = "word", ngram_range = (1, 2), lowercase = True, stop_words=stop_words)
+        self.tfidf_vc = TfidfVectorizer(min_df = 10, max_features = 200000, analyzer = "word", ngram_range = (1, 2), lowercase = True)
         self.explainer = LimeTextExplainer(class_names=["Negative", "Positive"])
-        self.pickle_name = 'model_with_stopwords.pkl' if with_stopwords else 'model.pkl'
-        self.tfidf_name = 'tfidf_vc_with_stopwords.pkl' if with_stopwords else 'tfidf_vc.pkl'
+        self.pickle_name = 'model.pkl'
+        self.tfidf_name = 'tfidf_vc.pkl'
 
     def save_model(self):
         if self.model is None:
@@ -71,6 +62,9 @@ class Classifier:
 
 
     def load_data(self, test_size = 0.15):
+        if len(self.train_data) != 0 and len(self.val_data) != 0:
+            print('Data is already loaded.')
+            return self
         print('Loading data...')
         data_ = pd.read_csv('cleaned_data.csv')
         data = pd.DataFrame(data={
@@ -113,17 +107,19 @@ class Classifier:
             print('Fit the model before predicting labels')
             return
 
-        val_vc = self.tfidf_vc.transform(self.val_data.texts)
-        val_pred = self.model.predict(val_vc)
+        val_pred = self.model.predict(self.tfidf_vc.transform(self.val_data.texts))
+
+        accuracy_percentage = (1 - (self.val_data.labels != val_pred).sum()/float(val_pred.size)) * 100
+        print(f'\nAccuracy: {accuracy_percentage:.2f} %')
         val_cv = f1_score(self.val_data.labels, val_pred, average = "binary")
-        print(val_cv)
+        print(f'f1 score: {val_cv}')
         return self
 
 
-    def predict(self, text: str, output_to_html=False):
+    def predict(self, text: str, output_to_html=False, open_output_file=False):
         pipeline = make_pipeline(self.tfidf_vc, self.model)
 
-        print("Text: \n", text)
+        print("Text: ", text)
         print("Probability (Positive) =", f"{pipeline.predict_proba([text])[0, 1] * 100:.2f} %") 
         print("Probability (Negative) =", f"{pipeline.predict_proba([text])[0, 0] * 100:.2f} %")
         # print("True Class is:", class_names[self.val_data.labels[idx]])
@@ -133,14 +129,37 @@ class Classifier:
                 explained_instance = self.explainer.explain_instance(text, pipeline.predict_proba, num_features = 10)
                 text_file.write(explained_instance.as_html())
 
-def main():
-    model = Classifier(with_stopwords=False)                                # Instantiate the classifier
-    model.load_data()                                    # Read data from file
-    model.fit()                          # Fit logistic regression model with train data
-    model.save_model()                                  # Save model to load later, instead of training all over again
-    model.print_score()                                 # Print model f1 accuracy based on test data
-    model.predict('i hate cats', output_to_html=True)   # Predict label on text
+        if open_output_file and output_to_html:
+            if os.path.isfile('Output.html'):
+                print('Opening webrowser to display output')
+                webbrowser.open(f"file://{os.path.abspath('Output.html')}", new=2)
+            else:
+                print('Output.html file cannot be found.')
 
+def main():
+    model = Classifier()
+    output_to_html = False
+    open_output_file = False
+
+    options, remainder = getopt.getopt(sys.argv[1:], 'p:fos', ['predict=', 'fit', 'output', 'stopwords', 'open', 'print_score'])
+    for opt, arg in options:
+        if opt in ('--open'):
+            open_output_file = True # opens output file in browser
+        elif opt in ('-o', '--output'):
+            output_to_html = True # output results to html file
+        elif opt in ('-s', '--stopwords'):
+            model.pickle_name = 'model_with_stopwords.pkl' 
+            model.tfidf_name = 'tfidf_vc_with_stopwords.pkl'
+        elif opt in ('-f', '--fit'):
+            model.load_data() # Read data from file
+            model.fit() # Fit logistic regression model with train data
+            model.save_model() # Save model to load later, instead of training all over again
+        elif opt in ('-p', '--predict'):
+            model.fit() # Fit logistic regression model with train data
+            model.predict(arg, output_to_html=output_to_html, open_output_file=open_output_file)    # Predict label on text
+        elif opt in ('--print_score'):
+            model.load_data()
+            model.print_score() # prints accuracy and f1 score
 
 if __name__ == '__main__':
     main()
