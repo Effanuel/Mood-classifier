@@ -5,6 +5,8 @@ import re
 import webbrowser
 import getopt
 import sys
+import seaborn as sn
+import matplotlib.pyplot as plt
 from nltk.corpus import stopwords
 from lime.lime_text import LimeTextExplainer
 import pickle
@@ -13,7 +15,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, confusion_matrix
+
+def show_heatmap(confusion_matrix: list[list[int]]):
+    ''' Plots confusion matrix heatmap '''
+    confusion_matrix_dataframe = pd.DataFrame(conf_matrix, ['True Positive', ' '], columns=[' ', 'True Negative'])
+    sn.set(font_scale=1.2)
+    sn.heatmap(confusion_matrix_dataframe, annot=True, annot_kws={"size": 14}, fmt='d', cmap='YlGnBu')
+    plt.show()
 
 # stop_words = stopwords.words('english')
 
@@ -47,6 +56,10 @@ class Classifier:
         self.tfidf_name = 'tfidf_vc.pkl'
 
     def save_model(self):
+        '''
+        Saves the model to pickle format, so they can be loaded later, without the need for training
+        This classifier currently supports a model with stopwords used and model without stopwords
+        '''
         if self.model is None:
             print('Fit the model before saving it')
             return
@@ -62,6 +75,9 @@ class Classifier:
 
 
     def load_data(self, test_size = 0.15):
+        '''
+        Reads and loads the data into the classifier
+        '''
         if len(self.train_data) != 0 and len(self.val_data) != 0:
             print('Data is already loaded.')
             return self
@@ -79,6 +95,12 @@ class Classifier:
         return self
     
     def fit(self):
+        '''
+        Fits the LogisticRegression and tfidf models, if pickles are not used
+        '''
+        if self.model is not None:
+            print('Model has already been fit.')
+            return
         model_pickle_exists = os.path.isfile(self.pickle_name) 
         tfidf_pickle_exists = os.path.isfile(self.tfidf_name)
 
@@ -103,20 +125,29 @@ class Classifier:
         return self
 
     def print_score(self):
+        '''
+        Prints f1 score, accuracy, confusion matrix, and opens confusion matrix heatmap
+        '''
         if self.model is None:
             print('Fit the model before predicting labels')
             return
 
-        val_pred = self.model.predict(self.tfidf_vc.transform(self.val_data.texts))
+        predicted_labels = self.model.predict(self.tfidf_vc.transform(self.val_data.texts))
 
-        accuracy_percentage = (1 - (self.val_data.labels != val_pred).sum()/float(val_pred.size)) * 100
+        accuracy_percentage = (1 - (self.val_data.labels != predicted_labels).sum()/float(predicted_labels.size)) * 100
         print(f'\nAccuracy: {accuracy_percentage:.2f} %')
-        val_cv = f1_score(self.val_data.labels, val_pred, average = "binary")
+        val_cv = f1_score(self.val_data.labels, predicted_labels, average = "binary")
         print(f'f1 score: {val_cv}')
+        conf_matrix = confusion_matrix(self.val_data.labels, predicted_labels)
+        print('Confusion matrix:\n', conf_matrix)
+        show_heatmap(conf_matrix)
         return self
 
 
-    def predict(self, text: str, output_to_html=False, open_output_file=False):
+    def predict(self, text: str, open_output_file=False):
+        '''
+        Predicts text sentiment (Positive or Negative)
+        ''' 
         pipeline = make_pipeline(self.tfidf_vc, self.model)
 
         print("Text: ", text)
@@ -124,12 +155,10 @@ class Classifier:
         print("Probability (Negative) =", f"{pipeline.predict_proba([text])[0, 0] * 100:.2f} %")
         # print("True Class is:", class_names[self.val_data.labels[idx]])
 
-        if output_to_html:
+        if open_output_file:
             with open("Output.html", "w") as text_file:
                 explained_instance = self.explainer.explain_instance(text, pipeline.predict_proba, num_features = 10)
                 text_file.write(explained_instance.as_html())
-
-        if open_output_file and output_to_html:
             if os.path.isfile('Output.html'):
                 print('Opening webrowser to display output')
                 webbrowser.open(f"file://{os.path.abspath('Output.html')}", new=2)
@@ -137,29 +166,43 @@ class Classifier:
                 print('Output.html file cannot be found.')
 
 def main():
+    '''
+    Command line arguments:
+        --print_score - prints f1 score, accuracy, confusion matrix of the model and opens confusion matrix heatmap
+        --predict=<text> - predicts sentiment of a given text 
+        --fit - loads data, fits logistic regresion model and saves the models to pickle files
+        --stopwords - if fitting or predicting should be done on a model that used stopwords filtering   
+        --open - saves the predicted label info in .html file and opens it in browser tab *(works only with --predict)*
+
+    Examples: 
+        * fit the model and show the score: `python main.py --fit --print_score`
+        * predict sentiment of text and open info: `python main.py --open --predict="I love dogs")`
+    '''
+
     model = Classifier()
-    output_to_html = False
     open_output_file = False
 
-    options, remainder = getopt.getopt(sys.argv[1:], 'p:fos', ['predict=', 'fit', 'output', 'stopwords', 'open', 'print_score'])
-    for opt, arg in options:
-        if opt in ('--open'):
-            open_output_file = True # opens output file in browser
-        elif opt in ('-o', '--output'):
-            output_to_html = True # output results to html file
-        elif opt in ('-s', '--stopwords'):
-            model.pickle_name = 'model_with_stopwords.pkl' 
-            model.tfidf_name = 'tfidf_vc_with_stopwords.pkl'
-        elif opt in ('-f', '--fit'):
-            model.load_data() # Read data from file
-            model.fit() # Fit logistic regression model with train data
-            model.save_model() # Save model to load later, instead of training all over again
-        elif opt in ('-p', '--predict'):
-            model.fit() # Fit logistic regression model with train data
-            model.predict(arg, output_to_html=output_to_html, open_output_file=open_output_file)    # Predict label on text
-        elif opt in ('--print_score'):
-            model.load_data()
-            model.print_score() # prints accuracy and f1 score
+    try:
+        options, remainder = getopt.getopt(sys.argv[1:], 'p:fso', ['predict=', 'fit', 'stopwords', 'open', 'print_score'])
+        for opt, arg in options:
+            if opt in ('--open'):
+                open_output_file = True # opens output file in browser
+            elif opt in ('-s', '--stopwords'):
+                model.pickle_name = 'model_with_stopwords.pkl'
+                model.tfidf_name = 'tfidf_vc_with_stopwords.pkl'
+            elif opt in ('-f', '--fit'):
+                model.load_data() # Read data from file
+                model.fit() # Fit logistic regression model with train data
+                model.save_model() # Save model to load later, instead of training all over again
+            elif opt in ('-p', '--predict'):
+                model.fit() # Fit logistic regression model with train data
+                model.predict(arg, open_output_file=open_output_file)    # Predict label on text
+            elif opt in ('--print_score'):
+                model.load_data()
+                model.fit() # Fit logistic regression model with train data
+                model.print_score() # prints accuracy and f1 score
+    except:
+        print('Error with command line arguments')
 
 if __name__ == '__main__':
     main()
