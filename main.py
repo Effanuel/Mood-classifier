@@ -1,5 +1,3 @@
-import nltk
-import random
 import os.path
 import re
 import webbrowser
@@ -17,11 +15,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import f1_score, confusion_matrix
 
-def show_heatmap(confusion_matrix: list[list[int]]):
+def show_heatmap(conf_matrix):
     ''' Plots confusion matrix heatmap '''
-    confusion_matrix_dataframe = pd.DataFrame(conf_matrix, ['True Positive', ' '], columns=[' ', 'True Negative'])
+    confusion_matrix_dataframe = pd.DataFrame(conf_matrix, ['Positive', 'Negative'], columns=['Positive', 'Negative'])
     sn.set(font_scale=1.2)
-    sn.heatmap(confusion_matrix_dataframe, annot=True, annot_kws={"size": 14}, fmt='d', cmap='YlGnBu')
+    sn.heatmap(confusion_matrix_dataframe, annot=True, annot_kws={'size': 14}, fmt='.2%', cmap=plt.cm.Blues)
+    plt.xlabel('Predicted label') 
+    plt.ylabel('True label') 
     plt.show()
 
 # stop_words = stopwords.words('english')
@@ -138,7 +138,7 @@ class Classifier:
         print(f'\nAccuracy: {accuracy_percentage:.2f} %')
         val_cv = f1_score(self.val_data.labels, predicted_labels, average = "binary")
         print(f'f1 score: {val_cv}')
-        conf_matrix = confusion_matrix(self.val_data.labels, predicted_labels)
+        conf_matrix = confusion_matrix(self.val_data.labels, predicted_labels, normalize='true')
         print('Confusion matrix:\n', conf_matrix)
         show_heatmap(conf_matrix)
         return self
@@ -153,7 +153,6 @@ class Classifier:
         print("Text: ", text)
         print("Probability (Positive) =", f"{pipeline.predict_proba([text])[0, 1] * 100:.2f} %") 
         print("Probability (Negative) =", f"{pipeline.predict_proba([text])[0, 0] * 100:.2f} %")
-        # print("True Class is:", class_names[self.val_data.labels[idx]])
 
         if open_output_file:
             with open("Output.html", "w") as text_file:
@@ -166,18 +165,19 @@ class Classifier:
                 print('Output.html file cannot be found.')
 
 def main():
-    '''
-    Command line arguments:
-        --print_score - prints f1 score, accuracy, confusion matrix of the model and opens confusion matrix heatmap
-        --predict=<text> - predicts sentiment of a given text 
-        --fit - loads data, fits logistic regresion model and saves the models to pickle files
-        --stopwords - if fitting or predicting should be done on a model that used stopwords filtering   
-        --open - saves the predicted label info in .html file and opens it in browser tab *(works only with --predict)*
+    if (len(sys.argv) < 2):
+        print('''
+        Command line arguments:
+            --print_score - prints f1 score, accuracy, confusion matrix of the model and opens confusion matrix heatmap
+            --predict=<text> - predicts sentiment of a given text 
+            --fit - loads data, fits logistic regresion model and saves the models to pickle files
+            --stopwords - if fitting or predicting should be done on a model that used stopwords filtering      
+            --open - saves the predicted label info in .html file and opens it in browser tab *(works only with --predict)*
 
-    Examples: 
-        * fit the model and show the score: `python main.py --fit --print_score`
-        * predict sentiment of text and open info: `python main.py --open --predict="I love dogs")`
-    '''
+        Examples: 
+            * fit the model and show the score: `python main.py --fit --print_score`
+            * predict sentiment of text and open info: `python main.py --open --predict="I love dogs")`
+        ''')
 
     model = Classifier()
     open_output_file = False
