@@ -20,6 +20,7 @@ def show_heatmap(conf_matrix):
     confusion_matrix_dataframe = pd.DataFrame(conf_matrix, ['Positive', 'Negative'], columns=['Positive', 'Negative'])
     sn.set(font_scale=1.2)
     sn.heatmap(confusion_matrix_dataframe, annot=True, annot_kws={'size': 14}, fmt='.2%', cmap=plt.cm.Blues)
+    plt.title('Normalized confusion matrix')
     plt.xlabel('Predicted label') 
     plt.ylabel('True label') 
     plt.show()
