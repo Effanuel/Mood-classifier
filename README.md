@@ -1,6 +1,6 @@
 # Mood-classifier
 
-### Natural text binary mood classifier
+Sentiment natural text classifier for twitter tweet texts based on Sentiment140 dataset
 
 
 
