@@ -25,8 +25,6 @@ def show_heatmap(conf_matrix):
     plt.ylabel('True label') 
     plt.show()
 
-# stop_words = stopwords.words('english')
-
 #lemmatizer = WordNetLemmatizer()
 ## Helper function that was used for cleaning data
 # def __cleanData(tweet_tokens):
@@ -55,6 +53,13 @@ class Classifier:
         self.explainer = LimeTextExplainer(class_names=["Negative", "Positive"])
         self.pickle_name = 'model.pkl'
         self.tfidf_name = 'tfidf_vc.pkl'
+
+    def use_tfidf_with_stopwords(self, exclude_stopwords = ()):
+        self.pickle_name = 'model_with_stopwords.pkl'
+        self.tfidf_name = 'tfidf_vc_with_stopwords.pkl'
+        stop_words = set(stopwords.words('english')) - set(exclude_stopwords)
+        self.tfidf_vc = TfidfVectorizer(min_df = 10, max_features = 200000, analyzer = "word", ngram_range = (1, 2), lowercase = True, stop_words = stop_words)
+        return self
 
     def save_model(self):
         '''
@@ -175,6 +180,7 @@ def main():
 
         Examples: 
             * fit the model and show the score: `python main.py --fit --print_score`
+            * fit model with stopwords: `python main.py --stopwords --fit`
             * predict sentiment of text and open info: `python main.py --open --predict="I love dogs")`
         ''')
         return
@@ -188,8 +194,7 @@ def main():
             if opt in ('--open'):
                 open_output_file = True # opens output file in browser
             elif opt in ('-s', '--stopwords'):
-                model.pickle_name = 'model_with_stopwords.pkl'
-                model.tfidf_name = 'tfidf_vc_with_stopwords.pkl'
+                model.use_tfidf_with_stopwords()
             elif opt in ('-f', '--fit'):
                 model.load_data() # Read data from file
                 model.fit() # Fit logistic regression model with train data
