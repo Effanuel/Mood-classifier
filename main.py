@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import f1_score, confusion_matrix
+from sklearn.metrics import f1_score, confusion_matrix, accuracy_score
 
 def show_heatmap(conf_matrix):
     ''' Plots confusion matrix heatmap '''
@@ -135,10 +135,8 @@ class Classifier:
 
         predicted_labels = self.model.predict(self.tfidf_vc.transform(self.val_data.texts))
 
-        accuracy_percentage = (1 - (self.val_data.labels != predicted_labels).sum()/float(predicted_labels.size)) * 100
-        print(f'\nAccuracy: {accuracy_percentage:.2f} %')
-        val_cv = f1_score(self.val_data.labels, predicted_labels, average = "binary")
-        print(f'f1 score: {val_cv}')
+        print(f'\nAccuracy: {accuracy_score(self.val_data.labels, predicted_labels)*100:.2f} %')
+        print(f'f1 score: {f1_score(self.val_data.labels, predicted_labels, average = "binary")}')
         conf_matrix = confusion_matrix(self.val_data.labels, predicted_labels, normalize='true')
         print('Confusion matrix:\n', conf_matrix)
         show_heatmap(conf_matrix)
@@ -179,6 +177,7 @@ def main():
             * fit the model and show the score: `python main.py --fit --print_score`
             * predict sentiment of text and open info: `python main.py --open --predict="I love dogs")`
         ''')
+        return
 
     model = Classifier()
     open_output_file = False
