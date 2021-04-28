@@ -25,11 +25,15 @@ pip install -r requirements.txt
 4. Run
 
 ```zsh
-python main.py
+ Command line arguments:
+            --print_score - prints f1 score, accuracy, confusion matrix of the model and opens confusion matrix heatmap
+            --predict=<text> - predicts sentiment of a given text 
+            --fit - loads data, fits logistic regresion model and saves the models to pickle files
+            --stopwords - if fitting or predicting should be done on a model that used stopwords filtering      
+            --open - saves the predicted label info in .html file and opens it in browser tab *(works only with --predict)*
+
+        Examples: 
+            * fit the model and show the score: `python main.py --fit --print_score`
+            * fit model with stopwords: `python main.py --stopwords --fit`
+            * predict sentiment of text and open info: `python main.py --open --predict="I love dogs")`
 ```
-
-
-Data downloaded from [here](https://www.kaggle.com/kazanova/sentiment140), tokenized with TweetTokenizer and cleaned by removing links and @'s
-
-* https://towardsdatascience.com/what-makes-your-question-insincere-in-quora-26ee7658b010
-* ... might be helpful https://realpython.com/python-nltk-sentiment-analysis/
