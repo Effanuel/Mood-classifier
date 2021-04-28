@@ -24,6 +24,7 @@ pip install -r requirements.txt
 
 4. Run
 
+`python main.py` with line arguments:
 ```zsh
  Command line arguments:
             --print_score - prints f1 score, accuracy, confusion matrix of the model and opens confusion matrix heatmap
