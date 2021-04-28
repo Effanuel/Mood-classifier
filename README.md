@@ -2,6 +2,15 @@
 
 ### Natural text binary mood classifier
 
+
+
+### Requirements:
+* Git
+* Python >=3.9.2
+* virtualenv
+
+
+
 1. Clone
 
 ```zsh
