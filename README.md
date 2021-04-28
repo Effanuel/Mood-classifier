@@ -22,7 +22,12 @@ source ./mood/bin/activate (or `.\mood\Scripts\activate`)
 pip install -r requirements.txt
 ```
 
-4. Run
+4. Extract cleaned data
+```zsh
+tar xvf cleaned_data.csv.zip
+```
+
+5. Run
 
 `python main.py` with line arguments:
 ```zsh
