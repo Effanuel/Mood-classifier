@@ -5,6 +5,7 @@ import getopt
 import sys
 import seaborn as sn
 import matplotlib.pyplot as plt
+from pathlib import Path
 from nltk.corpus import stopwords
 from lime.lime_text import LimeTextExplainer
 import pickle
@@ -112,10 +113,10 @@ class Classifier:
 
         if model_pickle_exists and tfidf_pickle_exists:
             with open(self.pickle_name, 'rb') as file:
-                print(f'Using already trained model: {self.pickle_name} file')
+                print(f'Using already trained classifier model: {self.pickle_name} file')
                 self.model = pickle.load(file)
             with open(self.tfidf_name, 'rb') as file:
-                print(f'Using already tfidf model: {self.tfidf_name} file')
+                print(f'Using already trained tfidf model: {self.tfidf_name} file')
                 self.tfidf_vc = pickle.load(file)
             return self
         else:
@@ -127,6 +128,7 @@ class Classifier:
         print('Fitting done.')
         print('Training in progress...')
         self.model = LogisticRegression(C = 1.0, solver = "sag").fit(train_vc, self.train_data.labels)
+        self.save_model()
         print('Training done.')
         return self
 
@@ -163,12 +165,15 @@ class Classifier:
                 explained_instance = self.explainer.explain_instance(text, pipeline.predict_proba, num_features = 10)
                 text_file.write(explained_instance.as_html())
             if os.path.isfile('Output.html'):
-                print('Opening webrowser to display output')
+                print('Opening browser to display output...')
                 webbrowser.open(f"file://{os.path.abspath('Output.html')}", new=2)
             else:
                 print('Output.html file cannot be found.')
 
 def main():
+    if not Path("./cleaned_data.csv").exists():
+        print('Extract data first: tar xvf cleaned_data.csv.zip')
+        return
     if (len(sys.argv) < 2):
         print('''
         Command line arguments:
@@ -188,26 +193,22 @@ def main():
     model = Classifier()
     open_output_file = False
 
-    try:
-        options, remainder = getopt.getopt(sys.argv[1:], 'p:fso', ['predict=', 'fit', 'stopwords', 'open', 'print_score'])
-        for opt, arg in options:
-            if opt in ('--open'):
-                open_output_file = True # opens output file in browser
-            elif opt in ('-s', '--stopwords'):
-                model.use_tfidf_with_stopwords()
-            elif opt in ('-f', '--fit'):
-                model.load_data() # Read data from file
-                model.fit() # Fit logistic regression model with train data
-                model.save_model() # Save model to load later, instead of training all over again
-            elif opt in ('-p', '--predict'):
-                model.fit() # Fit logistic regression model with train data
-                model.predict(arg, open_output_file=open_output_file)    # Predict label on text
-            elif opt in ('--print_score'):
-                model.load_data()
-                model.fit() # Fit logistic regression model with train data
-                model.print_score() # prints accuracy and f1 score
-    except:
-        print('Error with command line arguments')
+    options, remainder = getopt.getopt(sys.argv[1:], 'p:fso', ['predict=', 'fit', 'stopwords', 'open', 'print_score'])
+    for opt, arg in options:
+        if opt in ('--open'):
+            open_output_file = True # opens output file in browser
+        elif opt in ('-s', '--stopwords'):
+            model.use_tfidf_with_stopwords()
+        elif opt in ('-f', '--fit'):
+            model.load_data() # Read data from file
+            model.fit() # Fit logistic regression model with train data
+        elif opt in ('-p', '--predict'):
+            model.fit() # Fit logistic regression model with train data
+            model.predict(arg, open_output_file=open_output_file)    # Predict label on text
+        elif opt in ('--print_score'):
+            model.load_data()
+            model.fit() # Fit logistic regression model with train data
+            model.print_score() # prints accuracy and f1 score
 
 if __name__ == '__main__':
     main()
